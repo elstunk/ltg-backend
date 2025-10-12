@@ -21,6 +21,29 @@ app.get('/api/tournament/:id/research', async (req, reply)=>{
     ]
   }
 })
+// --- Magic-link (very simple demo) ---
+app.post('/api/auth/request-link', async (req, reply) => {
+  const email = (await req.body?.email) || (await req.body?.to);
+  if (!email) return reply.code(400).send({error:'email required'});
+  const token = Buffer.from(email + '|' + Date.now()).toString('base64url');
+  const link = `${process.env.APP_ORIGIN || 'http://localhost:5173'}/auth/callback?token=${token}`;
+  // send via Resend
+  try {
+    const r = await fetch('https://api.resend.com/emails', {
+      method:'POST',
+      headers:{'Authorization':`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json'},
+      body: JSON.stringify({ from: process.env.SENDER_EMAIL, to: email, subject: 'Your LTG login', html: `<a href="${link}">Click to sign in</a>` })
+    });
+    if(!r.ok) throw new Error(await r.text());
+  } catch(e) { app.log.error(e); }
+  return { ok:true };
+});
 
+app.get('/api/auth/callback', async (req, reply) => {
+  const { token } = req.query;
+  if(!token) return reply.code(400).send({error:'bad token'});
+  // TODO: verify token & create session cookie
+  reply.redirect((process.env.APP_ORIGIN || 'http://localhost:5173') + '/');
+});
 const port = process.env.PORT || 8080
 app.listen({ port, host:'0.0.0.0' }).then(()=> console.log('LTG backend on', port))
