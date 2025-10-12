@@ -1,0 +1,14 @@
+{
+  "name": "ltg-backend",
+  "version": "0.9.0",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.26.2",
+    "@fastify/cors": "^9.0.1",
+    "pg": "^8.11.5",
+    "dotenv": "^16.4.5"
+  }
+}
