@@ -1,35 +1,22 @@
-import { Resend } from "resend";
-import { createToken, buildVerifyUrl } from "../utils/magic-link.js";
+// routes/auth.js
 
-export default async function authRoutes(app, opts) {
-  const resend = new Resend(process.env.RESEND_API_KEY);
-  const FRONTEND_URL = process.env.FRONTEND_URL || "https://ltg-frontend.vercel.app";
+export default async function routes(app) {
+  app.get("/api/auth/verify-link", async (req, reply) => {
+    const { token } = req.query || {};
+    if (!token) return reply.code(400).send({ ok: false, error: "Missing token" });
 
-  app.post("/api/auth/request-link", async (req, reply) => {
-    const { email } = req.body;
-    if (!email) return reply.code(400).send({ message: "Missing email" });
-
-    const token = createToken();
-    // TODO: Save token + email to your DB table (login_tokens)
-    const verifyUrl = buildVerifyUrl(FRONTEND_URL, token);
-
-    // Send email with Resend
-    await resend.emails.send({
-      from: "Login <login@yourdomain.com>",
-      to: email,
-      subject: "Your sign-in link",
-      text: `Click here to sign in: ${verifyUrl}`,
-      html: `<p>Click below to sign in:</p><p><a href="${verifyUrl}">${verifyUrl}</a></p>`,
-    });
-
-    return { ok: true };
+    // TODO: verify token + mark as used, find/create user, etc.
+    // For demo purposes, accept any token and mint a fake session string.
+    const session = "demo-session-" + token.slice(0, 8);
+    return { ok: true, token: session };
   });
 
-  app.get("/api/auth/verify", async (req, reply) => {
-    const { token } = req.query;
-    if (!token) return reply.code(400).send({ message: "Missing token" });
-
-    // TODO: Look up token in DB, validate, mark used, etc.
-    return { ok: true };
+  // Optional: a /api/me endpoint if you want to read session and return user
+  app.get("/api/me", async (req, reply) => {
+    const auth = req.headers.authorization || "";
+    const match = auth.match(/^Bearer\s+(.+)$/);
+    if (!match) return reply.code(401).send({ ok: false });
+    // TODO: decode + look up user. Demo:
+    return { ok: true, user: { email: "user@example.com", name: "Demo User" } };
   });
 }
