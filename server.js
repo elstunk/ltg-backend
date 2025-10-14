@@ -9,6 +9,19 @@ import lineupRoutes from "./routes/lineup.js";
 import authRoutes from "./routes/auth.js";
 
 const app = Fastify({ logger: true });
+app.get("/", async () => ({
+  ok: true,
+  name: "ltg-backend",
+  endpoints: [
+    "/api/health",
+    "/api/tournaments",
+    "/api/leaderboard/:id",
+    "/api/lineup/submit",
+    "/api/auth/request-link",
+    "/api/auth/verify-link"
+  ]
+}));
+
 
 // allow your Vite dev server + prod site
 await app.register(cors, { origin: true });
