@@ -1,18 +1,22 @@
 {
   "name": "ltg-backend",
   "version": "1.0.0",
+  "description": "LumberTier Golf backend API (Fastify + Postgres)",
   "type": "module",
   "main": "server.js",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "dependencies": {
-    "@fastify/cors": "^10.1.0",
+    "@fastify/cors": "^9.0.1",
     "dotenv": "^16.4.5",
-    "fastify": "^5.6.1",
-    "jsonwebtoken": "^9.0.2",
+    "fastify": "^4.28.1",
     "pg": "^8.12.0",
-    "resend": "^6.1.2"
-  }
+    "resend": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "license": "MIT"
 }
