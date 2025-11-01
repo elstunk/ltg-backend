@@ -4,24 +4,30 @@
   "description": "LumberTier Golf backend API (Fastify + Postgres)",
   "type": "module",
   "main": "server.js",
- "scripts": {
-  "start": "node server.js",
-  "dev": "node server.js",
-  "seed": "node scripts/seed-db.js",
-  "dedupe": "node scripts/dedupe-db.js",
-  "migrate": "node scripts/migrate-db.js"
-
-
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "seed": "node scripts/seed-db.js",
+    "dedupe": "node scripts/dedupe-db.js",
+    "migrate": "node scripts/migrate-db.js",
+    "migrate:new": "node scripts/new-migration.js",
+    "db:setup": "npm run migrate && npm run seed"
   },
   "dependencies": {
-    "@fastify/cors": "^9.0.1",
+    "@fastify/cors": "^11.1.0",
+    "@fastify/swagger": "^9.5.2",
+    "@fastify/swagger-ui": "^5.2.3",
     "dotenv": "^16.4.5",
-    "fastify": "^4.28.1",
+    "fastify": "^5.6.1",
+    "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",
     "resend": "^3.3.0"
   },
   "engines": {
     "node": ">=20.0.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "pino-pretty": "^13.1.2"
+  }
 }
