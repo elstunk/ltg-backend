@@ -1,0 +1,32 @@
+CREATE TABLE IF NOT EXISTS tournaments (
+  id SERIAL PRIMARY KEY,
+  name TEXT NOT NULL,
+  tour TEXT DEFAULT 'PGA',
+  course TEXT,
+  city TEXT,
+  country TEXT,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  status TEXT DEFAULT 'upcoming'
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS lineups (
+  id SERIAL PRIMARY KEY,
+  user_id INT REFERENCES users(id) ON DELETE SET NULL,
+  tournament_id INT REFERENCES tournaments(id) ON DELETE CASCADE,
+  picks JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS leaderboard (
+  id SERIAL PRIMARY KEY,
+  tournament_id INT REFERENCES tournaments(id) ON DELETE CASCADE,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now()
+);

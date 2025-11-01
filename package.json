@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "seed": "node scripts/seed-db.js",
+    "dedupe": "node scripts/dedupe-db.js"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",

@@ -1,0 +1,38 @@
+// scripts/seed-db.js
+import fs from "node:fs";
+import path from "node:path";
+import url from "node:url";
+import "dotenv/config";
+import pkg from "pg";
+const { Pool } = pkg;
+
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+const sql = fs.readFileSync(path.join(__dirname, "..", "db", "schema.sql"), "utf8");
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: /render\.com|amazonaws|azure|herokuapp/i.test(process.env.DATABASE_URL || "")
+    ? { rejectUnauthorized: false }
+    : undefined,
+});
+
+async function run() {
+  await pool.query(sql);
+
+  const seed = await pool.query(`
+    INSERT INTO tournaments (name, tour, course, city, country, start_date, end_date, status)
+    VALUES
+      ('Shriners Children''s Open', 'PGA', 'TPC Summerlin', 'Las Vegas', 'USA', '2025-10-16', '2025-10-19', 'active'),
+      ('ZOZO Championship', 'PGA', 'Accordia Golf Narashino CC', 'Chiba', 'Japan', '2025-10-23', '2025-10-26', 'upcoming'),
+      ('Sanderson Farms Championship', 'PGA', 'CC of Jackson', 'Jackson', 'USA', '2025-10-09', '2025-10-12', 'completed')
+    ON CONFLICT DO NOTHING
+    RETURNING id;
+  `);
+  console.log(`✅ Seed complete. Inserted rows: ${seed.rowCount}`);
+  process.exit(0);
+}
+
+run().catch((e) => {
+  console.error("❌ Seed failed:", e);
+  process.exit(1);
+});
