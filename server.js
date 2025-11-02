@@ -12,10 +12,8 @@ import * as leaderboardMod from './src/routes/leaderboard.js';
 
 dotenv.config();
 const { Pool } = pkg;
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-app.decorate('pg', { pool });
 
-
+// 1) Create app first
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL || 'info',
@@ -23,7 +21,11 @@ const app = Fastify({
   },
 });
 
-// 🔎 Log every route as Fastify registers it
+// 2) ONE pool only, then decorate
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+app.decorate('pg', { pool });
+
+// Log each registered route
 app.addHook('onRoute', (routeOpts) => {
   app.log.info({ method: routeOpts.method, url: routeOpts.url }, 'route added');
 });
@@ -33,10 +35,6 @@ await app.register(cors, { origin: true });
 await app.register(swagger, { openapi: { info: { title: 'Fantasy Golf API', version: '1.0.0' } } });
 await app.register(swaggerUi, { routePrefix: '/docs' });
 
-// DB
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-app.decorate('pg', { pool });
-
 // Health
 app.get('/api/health', async () => ({ ok: true }));
 
@@ -44,15 +42,14 @@ app.get('/api/health', async () => ({ ok: true }));
 await app.register(buildPlayerRoutes, { prefix: '/api' });
 await app.register(buildTournamentRoutes, { prefix: '/api' });
 
-// Resolve leaderboard plugin (default or named)
+// Leaderboard plugin (default or named)
 app.log.info('[boot] resolving leaderboard plugin export');
 app.log.info('[boot] leaderboard module keys: ' + Object.keys(leaderboardMod).join(', '));
 const leaderboardPlugin = leaderboardMod.default ?? leaderboardMod.buildLeaderboardRoutes;
 if (!leaderboardPlugin) throw new Error('src/routes/leaderboard.js must export default or buildLeaderboardRoutes');
-
 await app.register(leaderboardPlugin, { prefix: '/api' });
 
-// Listen w/ fallback
+// Listen with fallback
 const portBase = Number(process.env.PORT || 3000);
 const host = process.env.HOST || '0.0.0.0';
 
