@@ -1,44 +1,74 @@
-import Fastify from "fastify";
-import cors from "@fastify/cors";
-import dotenv from "dotenv";
+// server.js
+import Fastify from 'fastify';
+import cors from '@fastify/cors';
+import swagger from '@fastify/swagger';
+import swaggerUi from '@fastify/swagger-ui';
+import pkg from 'pg';
+import dotenv from 'dotenv';
+
+import { buildPlayerRoutes } from './src/routes/player.js';
+import { buildTournamentRoutes } from './src/routes/tournament.js';
+import * as leaderboardMod from './src/routes/leaderboard.js';
+
 dotenv.config();
+const { Pool } = pkg;
 
-import tournamentsRoutes from "./routes/tournaments.js";
-import leaderboardRoutes from "./routes/leaderboard.js";
-import lineupRoutes from "./routes/lineup.js";
-import authRoutes from "./routes/auth.js";
+const app = Fastify({
+  logger: {
+    level: process.env.LOG_LEVEL || 'info',
+    transport: process.env.NODE_ENV === 'production' ? undefined : { target: 'pino-pretty' },
+  },
+});
 
-const app = Fastify({ logger: true });
-app.get("/", async () => ({
-  ok: true,
-  name: "ltg-backend",
-  endpoints: [
-    "/api/health",
-    "/api/tournaments",
-    "/api/leaderboard/:id",
-    "/api/lineup/submit",
-    "/api/auth/request-link",
-    "/api/auth/verify-link"
-  ]
-}));
+// 🔎 Log every route as Fastify registers it
+app.addHook('onRoute', (routeOpts) => {
+  app.log.info({ method: routeOpts.method, url: routeOpts.url }, 'route added');
+});
 
-
-// allow your Vite dev server + prod site
+// Core plugins
 await app.register(cors, { origin: true });
+await app.register(swagger, { openapi: { info: { title: 'Fantasy Golf API', version: '1.0.0' } } });
+await app.register(swaggerUi, { routePrefix: '/docs' });
 
-app.get("/api/health", async () => ({ ok: true }));
+// DB
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+app.decorate('pg', { pool });
 
-await app.register(tournamentsRoutes);
-await app.register(leaderboardRoutes);
-await app.register(lineupRoutes);
-await app.register(authRoutes);
+// Health
+app.get('/api/health', async () => ({ ok: true }));
 
-const PORT = process.env.PORT || 3000;
+// Routes
+await app.register(buildPlayerRoutes, { prefix: '/api' });
+await app.register(buildTournamentRoutes, { prefix: '/api' });
+
+// Resolve leaderboard plugin (default or named)
+app.log.info('[boot] resolving leaderboard plugin export');
+app.log.info('[boot] leaderboard module keys: ' + Object.keys(leaderboardMod).join(', '));
+const leaderboardPlugin = leaderboardMod.default ?? leaderboardMod.buildLeaderboardRoutes;
+if (!leaderboardPlugin) throw new Error('src/routes/leaderboard.js must export default or buildLeaderboardRoutes');
+
+await app.register(leaderboardPlugin, { prefix: '/api' });
+
+// Listen w/ fallback
+const portBase = Number(process.env.PORT || 3000);
+const host = process.env.HOST || '0.0.0.0';
+
 try {
-  await app.listen({ port: PORT, host: "0.0.0.0" });
-  console.log(`✅ API running on http://localhost:${PORT}`);
+  await app.listen({ port: portBase, host });
+  app.log.info({ port: portBase, host }, 'API listening');
 } catch (err) {
-  app.log.error(err);
-  process.exit(1);
+  if (err?.code === 'EADDRINUSE') {
+    const nextPort = portBase + 1;
+    app.log.warn(`Port ${portBase} in use — retrying on ${nextPort}`);
+    await app.listen({ port: nextPort, host });
+    app.log.info({ port: nextPort, host }, 'API listening');
+  } else {
+    app.log.error(err);
+    process.exit(1);
+  }
 }
 
+app.ready().then(() => {
+  app.log.info('--- ROUTES ---');
+  app.printRoutes({ includeHooks: false });
+});
