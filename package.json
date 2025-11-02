@@ -7,11 +7,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "seed": "node scripts/seed-db.js",
+    "seed": "node scripts/seed.js",
     "dedupe": "node scripts/dedupe-db.js",
     "migrate": "node scripts/migrate-db.js",
     "migrate:new": "node scripts/new-migration.js",
-    "db:setup": "npm run migrate && npm run seed"
+    "db:setup": "npm run migrate && npm run seed",
+    "test": "vitest run"
   },
   "dependencies": {
     "@fastify/cors": "^11.1.0",
@@ -31,3 +32,4 @@
     "pino-pretty": "^13.1.2"
   }
 }
+

@@ -30,6 +30,19 @@ export default async function tournamentsRoutes(app) {
     }
   });
 
+app.get("/api/tournaments/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { rows } = await pool.query(
+    `SELECT id, name, tour, course, city, country,
+            start_date AS "startDate", end_date AS "endDate", status
+     FROM tournaments WHERE id = $1`,
+    [id]
+  );
+  if (!rows.length) return reply.code(404).send({ error: "Not found" });
+  return rows[0];
+});
+
+
   // 🧪 Temporary: demo endpoint so we can compare
   app.get("/api/tournaments_demo", async () => ({
     ok: true,

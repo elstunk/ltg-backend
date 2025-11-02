@@ -12,6 +12,9 @@ import * as leaderboardMod from './src/routes/leaderboard.js';
 
 dotenv.config();
 const { Pool } = pkg;
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+app.decorate('pg', { pool });
+
 
 const app = Fastify({
   logger: {

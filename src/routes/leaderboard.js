@@ -1,34 +1,28 @@
-// src/routes/leaderboard.js
-export default async function buildLeaderboardRoutes(app) {
-  app.log.info('✅ registering leaderboard routes');
+/** @param {import('fastify').FastifyInstance} app */
+export async function buildLeaderboardRoutes(app) {
+  const pool = app.pg.pool;
 
-  // Canonical handler
-  const handler = async (req, reply) => {
-    const id = Number(req.params.tournamentId ?? req.params.id);
+  // Health
+  app.get('/leaderboard/health', async () => ({ ok: true, where: 'leaderboard routes' }));
 
-    const { rows: lidRows } = await app.pg.pool.query(
-      'SELECT id FROM leaderboard WHERE tournament_id = $1 ORDER BY id DESC LIMIT 1',
-      [id]
-    );
-    if (!lidRows.length) return reply.code(404).send({ error: 'No leaderboard' });
-
-    const lid = lidRows[0].id;
-    const { rows: entries } = await app.pg.pool.query(
-      `SELECT e.player_id, p.name, e.pos, e.pos_sort, e.score, e.thru, e.today
-       FROM leaderboard_entries e
-       JOIN players p ON p.player_id = e.player_id
-       WHERE e.leaderboard_id = $1
-       ORDER BY e.pos_sort ASC`,
-      [lid]
-    );
-
-    return { tournament_id: id, leaderboard_id: lid, entries };
-  };
-
-  // ✅ Canonical
-  app.get('/leaderboard/:tournamentId', handler);
-
-  // 🔁 Alias calls the same handler (no redirect)
-  app.get('/tournament/:id/leaderboard', handler);
+  // Leaderboard for a tournament
+  // Adjust table/columns to your schema; this query is intentionally generic.
+  app.get('/leaderboard/:tournamentId', async (req, reply) => {
+    const { tournamentId } = req.params;
+    try {
+      // If your schema uses different names, change the FROM/WHERE accordingly.
+      const { rows } = await pool.query(
+        'select * from leaderboard where tournament_id = $1',
+        [tournamentId]
+      );
+      return rows;
+    } catch (err) {
+      app.log.error({ err, tournamentId }, 'leaderboard query failed');
+      reply.code(500);
+      return { error: 'leaderboard query failed' };
+    }
+  });
 }
 
+// Export default too (your server.js supports default or named)
+export default buildLeaderboardRoutes;

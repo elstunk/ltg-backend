@@ -1,36 +1,43 @@
-import { query } from '../lib/db.js'
-import { cache } from '../lib/cache.js'
-
+/** @param {import('fastify').FastifyInstance} app */
 export async function buildTournamentRoutes(app) {
-  // Demo research route (stub)
-  app.get('/tournament/:id/research', async () => ({
-    meta: { name: 'Demo Event', tour: 'PGA' },
-    field_strength: { metric: 72, method: 'rank-based-v1' },
-    player_form: [
-      { player_id: 'p1', name: 'A01 Demo', tier: 'A', last8_avg: 33.4, last4_trend: 0.7, cuts_made: 7, top10s: 3, top25s: 6 },
-      { player_id: 'p2', name: 'B02 Sample', tier: 'B', last8_avg: 31.9, last4_trend: -0.2, cuts_made: 6, top10s: 2, top25s: 4 },
-    ],
-  }))
+  const pool = app.pg.pool;
 
-  // GET /api/tournament/:id
-  app.get('/tournament/:id', {
-    schema: {
-      summary: 'Get tournament metadata',
-      params: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
-    },
-  }, async (req) => {
-    const key = `tournament:${req.params.id}`
-    const memo = cache.get(key)
-    if (memo) return memo
+  // Health
+  app.get('/tournament/health', async () => ({ ok: true, where: 'tournament routes' }));
 
-    const { rows } = await query(app, `
-      SELECT id, name, tour, course, city, country, start_date, end_date, status
-      FROM tournaments
-      WHERE id = $1
-    `, [req.params.id])
+  // List tournaments
+  app.get('/tournaments', async (req, reply) => {
+    try {
+      // Order by start_date if present; if not, the ORDER BY is ignored by Postgres
+      const { rows } = await pool.query(`
+        select *
+        from tournaments
+        order by start_date desc nulls last
+        limit 500
+      `);
+      return rows;
+    } catch (err) {
+      app.log.error({ err }, 'tournaments query failed');
+      reply.code(500);
+      return { error: 'tournaments query failed' };
+    }
+  });
 
-    const out = rows[0] || null
-    cache.set(key, out, 300_000)
-    return out
-  })
+  // One tournament by id
+  app.get('/tournaments/:id', async (req, reply) => {
+    const { id } = req.params;
+    try {
+      const { rows } = await pool.query('select * from tournaments where id = $1', [id]);
+      if (rows.length === 0) {
+        reply.code(404);
+        return { error: 'tournament not found' };
+      }
+      return rows[0];
+    } catch (err) {
+      app.log.error({ err, id }, 'tournament by id query failed');
+      reply.code(500);
+      return { error: 'tournament by id query failed' };
+    }
+  });
 }
+export default buildTournamentRoutes;
