@@ -1,0 +1,4 @@
+-- 20251101_142920_add_purse_column.sql
+-- Write your SQL here. This file runs inside a transaction.
+-- Example:
+--   ALTER TABLE tournaments ADD COLUMN purse NUMERIC;
